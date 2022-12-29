@@ -4,6 +4,7 @@ from pathlib import Path
 from urllib.request import urlopen
 from urllib.request import Request
 from urllib.error import HTTPError
+from discord.errors import HTTPException
 from json import loads
 from bs4 import BeautifulSoup
 
@@ -13,8 +14,9 @@ class Pencake(discord.Bot):
 		print(f'Logged in as {self.user}')
 
 	async def on_member_join(self, member):
-		role = discord.utils.get(member.guild.roles, name="User")
-		member.add_roles(role)
+		if not member.bot:
+			role = discord.utils.get(member.guild.roles, name="User")
+			member.add_roles(role)
 
 bot = Pencake()
 config = loads(Path('config.json').read_text())
@@ -54,60 +56,70 @@ try:
 		}
 
 		embed = discord.Embed(
-			title=f"{problem['id']}: {problem['title']}",
-			description=problem['tier'],
+			title=problem['id'],
+			description=problem['title'],
 			url=f"https://www.acmicpc.net/problem/{problem['id']}",
 			color=problem['tier_color']
 		)
 
+		embed.add_field(name="Tier", value=problem['tier'], inline=False)
 		if problem['tags']:
 			embed.add_field(name="Tags", value='\n'.join(problem['tags']))
 
 		class Button(discord.ui.View):
-			@discord.ui.button(label=f"{problem['id']}번 펼치기", style=discord.ButtonStyle.primary)
+			def __init__(self, *items):
+				super().__init__(*items)
+				self.count = 0
+
+			@discord.ui.button(label=f"{problem['id']}번 펼치기", style=discord.ButtonStyle.gray)
 			async def info(self, button, interaction):
-				info = discord.Embed(
-					title=f"{problem['id']}: {problem['title']}",
-					description=problem['tier'],
-					url=f"https://www.acmicpc.net/problem/{problem['id']}",
-					color=problem['tier_color']
-				)
+				if self.count % 2 == 0:
+					button.label = f"{problem['id']}번 접기"
 
-				req = Request(f"https://www.acmicpc.net/problem/{objects['problemId']}",
-				              headers={'User-Agent': 'Mozila/5.0'})
-				webpage = urlopen(req)
-				soup = BeautifulSoup(webpage, features="html.parser")
+					info = discord.Embed(
+						title=problem['id'],
+						description=problem['title'],
+						url=f"https://www.acmicpc.net/problem/{problem['id']}",
+						color=problem['tier_color']
+					)
 
-				problem['info'] = {
-					"problem_description": soup.find('div', id='problem_description').text.strip(),
-					"problem_input": soup.find('div', id='problem_input').text.strip(),
-					"problem_output": soup.find('div', id='problem_output').text.strip(),
-					"sample_inputs": [],
-					"sample_outputs": []
-				}
+					req = Request(f"https://www.acmicpc.net/problem/{objects['problemId']}",
+					              headers={'User-Agent': 'Mozila/5.0'})
+					webpage = urlopen(req)
+					soup = BeautifulSoup(webpage, features="html.parser")
 
-				c = 1
-				while soup.find('pre', id=f'sample-output-{c}') is not None:
-					problem['info']['sample_inputs'].append(soup.find('pre', id=f'sample-input-{c}').text)
-					problem['info']['sample_outputs'].append(soup.find('pre', id=f'sample-output-{c}').text)
-					c += 1
+					problem['info'] = {
+						"problem_description": soup.find('div', id='problem_description').text.strip(),
+						"problem_input": soup.find('div', id='problem_input').text.strip(),
+						"problem_output": soup.find('div', id='problem_output').text.strip(),
+						"sample_inputs": [],
+						"sample_outputs": []
+					}
 
-				info.add_field(name="Problem", value=f"```\n{problem['info']['problem_description']}\n```", inline=False)
-				info.add_field(name="Input", value=f"```\n{problem['info']['problem_input']}\n```", inline=False)
-				info.add_field(name="Output", value=f"```\n{problem['info']['problem_output']}\n```", inline=False)
+					c = 1
+					while soup.find('pre', id=f'sample-output-{c}') is not None:
+						problem['info']['sample_inputs'].append(soup.find('pre', id=f'sample-input-{c}').text)
+						problem['info']['sample_outputs'].append(soup.find('pre', id=f'sample-output-{c}').text)
+						c += 1
 
-				for i in range(len(problem['info']['sample_inputs'])):
-					info.add_field(name=f"Sample Input {i+1}", value=f"```\n{problem['info']['sample_inputs'][i]}\n```", inline=False)
-					info.add_field(name=f"Sample Output {i+1}", value=f"```\n{problem['info']['sample_outputs'][i]}\n```", inline=False)
+					info.add_field(name="Tier", value=problem['tier'], inline=False)
+					info.add_field(name="Problem", value=f"```\n{problem['info']['problem_description']}\n```", inline=False)
+					info.add_field(name="Input", value=f"```\n{problem['info']['problem_input']}\n```", inline=False)
+					info.add_field(name="Output", value=f"```\n{problem['info']['problem_output']}\n```", inline=False)
 
-				if problem['tags']:
-					info.add_field(name="Tags", value='\n'.join(problem['tags']), inline=False)
+					for i in range(len(problem['info']['sample_inputs'])):
+						info.add_field(name=f"Sample Input {i+1}", value=f"```\n{problem['info']['sample_inputs'][i]}\n```", inline=False)
+						info.add_field(name=f"Sample Output {i+1}", value=f"```\n{problem['info']['sample_outputs'][i]}\n```", inline=False)
 
-				await interaction.response.edit_message(embed=info, view=self)
+					if problem['tags']:
+						info.add_field(name="Tags", value='\n'.join(problem['tags']), inline=False)
 
-			@discord.ui.button(label=f"{problem['id']}번 접기", style=discord.ButtonStyle.primary)
-			async def info_2(self, button, interaction):
-				await interaction.response.edit_message(embed=embed, view=self)
+					await interaction.response.edit_message(embed=info, view=self)
+				else:
+					button.label = f"{problem['id']}번 펼치기"
+					await interaction.response.edit_message(embed=embed, view=self)
+
+				self.count += 1
 
 		await ctx.respond(embed=embed, view=Button())
 
