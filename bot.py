@@ -1,5 +1,6 @@
 import discord
 import random
+import os
 from pathlib import Path
 from urllib.request import urlopen
 from urllib.request import Request
@@ -7,6 +8,7 @@ from urllib.error import HTTPError
 from discord.errors import HTTPException
 from json import loads
 from bs4 import BeautifulSoup
+from keep_alive import keep_alive
 
 # make
 class Pencake(discord.Bot):
@@ -175,4 +177,10 @@ except Exception as error:
 	print(error)
 
 bot.add_application_command(BOJ)
-bot.run(config['token'])
+
+keep_alive()
+try: bot.run(config['token'])
+except HTTPException:
+	print("\n\n\nBLOCKED BY RATE LIMITS\nRESTARTING NOW\n\n\n")
+	os.system('kill 1')
+	os.system("python restarter.py")
