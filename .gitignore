@@ -1,2 +1,3 @@
-test.py
-config.json
+discordpy/test.py
+discordjs/config.json
+node_modules
