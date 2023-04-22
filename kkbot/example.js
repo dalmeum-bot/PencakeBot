@@ -1,28 +1,35 @@
+const allowedUserIdList = 95;
+const allowedPackageNameList = "com.kakao.talk";
+const replyActionTitleList = ["reply", "답장"];
 const bot = BotManager.getCurrentBot();
-var { registry, cmd } = require('cmd.js');
 
-bot.setCommandPrefix("/");
-bot.addListener(Event.COMMAND, (msg) => {
-    registry.register(
-        math, ping
-    );
+bot.on("notificationPosted", (sbn, sm) => {
+    if (!(allowedUserIdList == sbn.userId && allowedPackageNameList == sbn.getPackageName())) return;
 
-    var result = registry.execute(msg);
-    if (result != null)
-        msg.reply(result);
-    else
-        msg.markAsRead();
+    const actions = sbn.getNotification().actions;
+    if (actions === null) return;
+
+    actions.forEach((action) => {
+        if (replyActionTitleList.includes(String(action.title).toLowerCase())) {
+            const data = sbn.getNotification().extras;
+
+            const sender = data.getString("android.title");
+            const room = data.getString("android.subText") || sender;
+
+            const msg = data.getString("android.text");
+            // const isGroupChat = data.getBoolean("android.isGroupConversation");
+            // const packageName = noti.getPackageName();
+        
+            // const replier = new com.xfl.msgbot.script.api.legacy.SessionCacheReplier(packageName, action, room, false, scriptName);
+            // const icon = data.getParcelable("android.messagingUser").getIcon().getBitmap();
+            // const imageDB = new com.xfl.msgbot.script.api.legacy.ImageDB(icon, icon);
+        
+            // com.xfl.msgbot.application.service.NotificationListener.Companion.setSession(packageName, room, action);
+            // onMsg.call(this, room, msg, sender, isGroupChat, replier, imageDB, packageName);
+        }
+    });    
 });
 
-var math = add => new cmd('add', 'plus')
-    .onlyDual(true)
-    .canDM(false)
-    .args(Number, numbers => new cmd()
-        .do(msg =>
-            numbers.reduce((acc, cur) => acc + cur)
-        )
-    );
-
-var ping = ping => new cmd('ping')
-    .desc('ping command')
-    .do('pong');
+const onMsg = (room, msg, sender, isGroupChat, replier, imageDB, packageName) => {
+    Log.d(msg);
+};

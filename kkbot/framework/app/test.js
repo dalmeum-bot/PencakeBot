@@ -1,21 +1,28 @@
-const { Kkbot, Member, Room } = require('./kkbot');
-const { Command, Commander, Int, Float, Str, Mention, Day, Pattern, Function } = require('./command');
+const { Kkbot, Member, Room } = require('./kkbot.js');
+const { Command, Commander, Pattern, Function, Type } = require('./command.js');
 
 // const dalmeum = new Kkbot(BotManager.getCurrentBot());
 const commander = new Commander('/').setcommand({
-    util: {
-        ping: () => "pong",
-        echo: ((content) => content).type(Str),
-        day: ((day) => day.month + "월 " + day.day + "일을 입력하셨습니다.").type(Day)
-    },
-    math: {
-        add: ((a, b) => a + b).type(Int, Int),
-        addf: ((a, b) => a + b).type(Float, Float)
-    }
+    ping: (chat) => "pong",
+
+    kick: ((chat, user, reason="기본인자") => {
+        return `@${user} 를 강퇴합니다. 사유: ${reason}`;
+    }).type(Type.mention, Type.string.option()),
+
+    add: ((chat, numbers) => numbers.reduce((acc, cur) => acc + cur)).type(Type.int.many())
 });
 
+
+// dalmeum.on("message", (chat) => {
+//     let result = commander.execute(chat);
+//     if (result != null)
+//         chat.send(result);
+//     else
+//         chat.markAsRead();
+// });
+
 const chat = {
-    content: "/util echo helloworld",
+    content: "/ping",
     hasMention: true,
     packageName: "com.kakao.talk",
     room: {

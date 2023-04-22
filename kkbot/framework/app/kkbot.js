@@ -9,10 +9,16 @@ Kkbot.prototype = {
                 this.bot.addListener("message", (msg) => {
                     execute({
                         content: msg.content,
-                        hasMention: msg.isMention,
-                        packageName: msg.packageName,
+                        image: msg.image,
+
                         room: new Room(msg),
                         member: new Member(msg),
+                        
+                        isDual: msg.systemUserId == 95,
+                        chatLogId: msg.chatLogId,
+                        hasMention: msg.isMention,
+                        packageName: msg.packageName,
+                        
                         send: (s) => msg.reply(s),
                         markAsRead: () => msg.markAsRead()
                     });
@@ -45,7 +51,9 @@ Member.prototype = {
 function Room(msg) {
     this.name = msg.room;
     this.isGroupChat = msg.isGroupChat;
-    this.isDebugRoom = msg.isDebugRoom;
+    this.isOpenChat = msg.room.isOpenChat;
+    this.icon = msg.room.icon;
+    this.id = msg.room.id;
 }
 
 Room.prototype = {
