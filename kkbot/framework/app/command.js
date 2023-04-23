@@ -95,6 +95,9 @@ Command.prototype = {
 }
 
 // ---------------------------------------------------------------
+// TODO: easier pattern write
+// TODO: only using named group
+// TODO: union pattern
 function Pattern(pattern) {
     this.pattern = pattern;
     this.match = {};
