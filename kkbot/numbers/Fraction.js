@@ -1,3 +1,9 @@
+/**
+ * Rational number class
+ * @author rhseung
+ * @during 2023. 4. 23 ~ 2023. 4. 24
+ */
+
 function Rational(n, d) {
     if (d == 0) {
         throw new Error("Division by zero");
@@ -53,7 +59,18 @@ Rational.prototype = {
         return new Rational(-this.numerator, this.denominator);
     },
 
+    equal(q) {
+        let q = q.reduce();
+        return this.numerator == q.numerator && this.denominator == q.denominator;
+    },
 
+    greater(q) {
+        return this.numerator * q.denominator > q.numerator * this.denominator;
+    },
+
+    less(q) {
+        return this.numerator * q.denominator < q.numerator * this.denominator;
+    },
 
     inverse() {
         return new Rational(this.denominator, this.numerator);
@@ -66,7 +83,11 @@ Rational.prototype = {
     },
 
     toString() {
-        return this.numerator + "/" + this.denominator;
+        return this.numerator + (this.denominator !== 1 ? ("/" + this.denominator) : "");
+    },
+
+    toNumber() {
+        return this.numerator / this.denominator;
     }
 };
 
@@ -76,10 +97,9 @@ Rational.prototype = {
  * @returns {Rational}
  */
 
-// TODO: cycle
-const _RATIONAL_FORMAT = /^\s*(?<sign>[-+]?)(?=\d|\.\d)(?<num>\d*|\d+(?:_\d+)*)(?:(?:[:/](?<denom>\d+(?:_\d+)*))?|(?:\.(?<decimal>|\d+(?:_\d+)*)?)?(?:[eE](?<exp>[-+]?\d+(?:_\d+)*))?)\s*$/;
+const _RATIONAL_FORMAT = /^\s*(?<sign>[-+]?)(?=\d|\.\d)(?<num>\d*|\d+(?:_\d+)*)(?:(?:[:/](?<denom>\d+(?:_\d+)*))?|(?:\.(?<decimal>|\d+(?:_\d+)*)?(?:'(?<cycle>\d+(?:_\d+)*?)')?)?(?:[eE](?<exp>[-+]?\d+(?:_\d+)*))?)\s*$/;
 
-module.exports = function Fraction(numerator, denominator) {
+function Fraction(numerator, denominator) {
     if (numerator === undefined && denominator === undefined) {
         return new Rational(0, 1);
     } else if (denominator === undefined) {
@@ -93,7 +113,48 @@ module.exports = function Fraction(numerator, denominator) {
             case Rational:
                 return numerator;
             case String:
-                
+                let m = numerator.match(_RATIONAL_FORMAT);
+                if (m == null) {
+                    throw new Error("Invalid rational format: " + numerator);
+                }
+
+                for (let k in m.groups) {
+                    if (m.groups[k] != undefined && k != 'sign') {
+                        m.groups[k] = m.groups[k].replace(/_/g, '');
+                    }
+                }
+
+                let num = m.groups.num || '';
+                let denom = m.groups.denom || '';
+                if (denom) {
+                    denom = Number(denom);
+                } else {
+                    denom = 1
+                    let decimal = m.groups.decimal || '';
+                    let exp = m.groups.exp;
+                    let cycle = m.groups.cycle || '0';
+
+                    if (decimal !== undefined || cycle !== undefined) {
+                        num = Number(num + decimal + cycle) - Number(num + decimal);
+                        denom = Math.pow(10, decimal.length) * (Math.pow(10, cycle.length) - 1);
+                    }
+                    
+                    if (exp !== undefined) {
+                        exp = Number(exp);
+                        
+                        if (exp >= 0) {
+                            num *= Math.pow(10, exp);
+                        } else {
+                            denom *= Math.pow(10, -exp);
+                        }
+                    }
+                }
+
+                if (m.groups.sign == '-') {
+                    num = -num;
+                }
+
+                return new Rational(num, denom).reduce();
             default:
                 throw new TypeError("numerator should be a String or Number or Rational instance.");
         }
@@ -101,8 +162,10 @@ module.exports = function Fraction(numerator, denominator) {
         if (Number.isInteger(numerator) && Number.isInteger(denominator)) {
             return new Rational(numerator, denominator);
         } else {
-
+            return Fraction(String(numerator)).div(Fraction(String(denominator)));
         }
-        return new Rational(numerator, denominator);
     }
 };
+
+module.exports = Fraction;
+
